@@ -10,8 +10,47 @@
 #include "GPIO.h"
 #include "Bits.h"
 
+void RGB_RED_ON(void){
+	RGB_off();
+	GPIO_clear_pin(GPIO_B, bit_22);
+
+}
+
+void RGB_BLUE_ON(void){
+	RGB_off();
+	GPIO_clear_pin(GPIO_B, bit_21);
+
+}
+
+void RGB_GREEN_ON(void){
+	RGB_off();
+	GPIO_clear_pin(GPIO_E, bit_26);
+
+}
+
+void RGB_WHITE_ON(void){
+	RGB_off();
+	GPIO_clear_pin(GPIO_B, bit_21);
+	GPIO_clear_pin(GPIO_B, bit_22);
+	GPIO_clear_pin(GPIO_E, bit_26);
+
+}
+
+void RGB_PURPLE_ON(void){
+	RGB_off();
+	GPIO_clear_pin(GPIO_B, bit_21);
+	GPIO_clear_pin(GPIO_B, bit_22);
+
+}
+
+void RGB_YELLOW_ON(void){
+	RGB_off();
+	GPIO_clear_pin(GPIO_B, bit_22);
+	GPIO_clear_pin(GPIO_E, bit_26);
+}
 
 void RGB_color_on(uint32_t color){
+	RGB_off();
 	switch(color)
 	{
 		case RED:

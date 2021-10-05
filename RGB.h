@@ -18,7 +18,23 @@ typedef enum{
 				BLACK,		// apaga los colores
 }color;
 
- /* enciende color*/
+
+/*Funciones para prender color individual para
+ *ahorrar tiempo de comparacion de switch case*/
+
+void RGB_RED_ON(void);
+
+void RGB_BLUE_ON(void);
+
+void RGB_GREEN_ON(void);
+
+void RGB_WHITE_ON(void);
+
+void RGB_PURPLE_ON(void);
+
+void RGB_YELLOW_ON(void);
+
+ /* enciende cualquier color*/
 
 void RGB_color_on(uint32_t color);
 
