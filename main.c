@@ -21,6 +21,7 @@ void RGB_init(void);
 void SW_init(void);
 void PIT_init(void);
 
+//10 elements. 9 states and 1 default state at start
 typedef enum {
 	NO_COLOR,
 	YELLOW_SQ1,
@@ -38,25 +39,24 @@ typedef enum {
 typedef struct
 {
 	void (*FuncPoint)(void);
-	uint16_t wait;
 	uint8_t next[4];
 }State_t;
 
 uint32_t input_port_a = 0, input_port_c = 0, total_input = 0;
 const State_t FSM_Moore[10]=
 	{
-		{&RGB_off		,65000 ,{BLUE_SQ3 , YELLOW_SQ1, GREEN_SQ2, NO_COLOR		}},	/* YELLOW_1 	*/
-		{&RGB_YELLOW_ON ,65000 ,{BLUE_SQ3 , RED_SQ1   , GREEN_SQ2, RED_SQ1		}},	/* YELLOW_1 	*/
-		{&RGB_RED_ON 	,65000 ,{BLUE_SQ3 , PURPLE_SQ1, GREEN_SQ2, PURPLE_SQ1	}},	/* RED_1 		*/
-		{&RGB_PURPLE_ON ,65000 ,{BLUE_SQ3 , YELLOW_SQ1, GREEN_SQ2, YELLOW_SQ1	}},	/* PURPLE_1	*/
+		{&RGB_off		,{BLUE_SQ3 , YELLOW_SQ1, GREEN_SQ2, NO_COLOR	}},	/* YELLOW_1 	*/
+		{&RGB_YELLOW_ON ,{BLUE_SQ3 , RED_SQ1   , GREEN_SQ2, RED_SQ1		}},	/* YELLOW_1 	*/
+		{&RGB_RED_ON 	,{BLUE_SQ3 , PURPLE_SQ1, GREEN_SQ2, PURPLE_SQ1	}},	/* RED_1 		*/
+		{&RGB_PURPLE_ON ,{BLUE_SQ3 , YELLOW_SQ1, GREEN_SQ2, YELLOW_SQ1	}},	/* PURPLE_1	*/
 
-		{&RGB_GREEN_ON 	,65000 ,{BLUE_SQ3 , YELLOW_SQ1, RED_SQ2  , RED_SQ2		}},	/* GREEN_2 	*/
-		{&RGB_RED_ON 	,65000 ,{BLUE_SQ3 , YELLOW_SQ1, WHITE_SQ2, WHITE_SQ2	}},	/* RED_2 		*/
-		{&RGB_WHITE_ON	,65000 ,{BLUE_SQ3 , YELLOW_SQ1, GREEN_SQ2, GREEN_SQ2	}},	/* WHITE_2 	*/
+		{&RGB_GREEN_ON 	,{BLUE_SQ3 , YELLOW_SQ1, RED_SQ2  , RED_SQ2		}},	/* GREEN_2 	*/
+		{&RGB_RED_ON 	,{BLUE_SQ3 , YELLOW_SQ1, WHITE_SQ2, WHITE_SQ2	}},	/* RED_2 		*/
+		{&RGB_WHITE_ON	,{BLUE_SQ3 , YELLOW_SQ1, GREEN_SQ2, GREEN_SQ2	}},	/* WHITE_2 	*/
 
-		{&RGB_BLUE_ON	,65000 ,{GREEN_SQ3, YELLOW_SQ1, GREEN_SQ2, GREEN_SQ3	}},	/* BLUE_3 	*/
-		{&RGB_GREEN_ON	,65000 ,{WHITE_SQ3, YELLOW_SQ1, GREEN_SQ2, WHITE_SQ3	}},	/* GREEN_3 	*/
-		{&RGB_WHITE_ON	,65000 ,{BLUE_SQ3 ,	YELLOW_SQ1, GREEN_SQ2, BLUE_SQ3		}},	/* WHITE_3 	*/
+		{&RGB_BLUE_ON	,{GREEN_SQ3, YELLOW_SQ1, GREEN_SQ2, GREEN_SQ3	}},	/* BLUE_3 	*/
+		{&RGB_GREEN_ON	,{WHITE_SQ3, YELLOW_SQ1, GREEN_SQ2, WHITE_SQ3	}},	/* GREEN_3 	*/
+		{&RGB_WHITE_ON	,{BLUE_SQ3 ,	YELLOW_SQ1, GREEN_SQ2, BLUE_SQ3	}},	/* WHITE_3 	*/
 
 	};
 
@@ -71,7 +71,6 @@ int main(void) {
 	//Initialize RGB and Switch button pins.
 	RGB_init();
 	SW_init();
-
 	//Enable global interrupts, PIT0 interrupt and its priority
 	NVIC_enable_interrupt_and_priotity(PIT_CH0_IRQ, PRIORITY_10);
 	NVIC_enable_interrupt_and_priotity(PIT_CH1_IRQ, PRIORITY_9);
@@ -82,8 +81,6 @@ int main(void) {
 	for(;;){
 
 		if(TRUE == PIT1_get_interrupt_flag_status()){
-
-
 			current_state = FSM_Moore[current_state].next[PIT0_get_total_input()];
 			FSM_Moore[current_state].FuncPoint();
 			PIT1_clear_interrupt_flag();

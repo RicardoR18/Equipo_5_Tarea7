@@ -23,6 +23,9 @@ uint8_t PIT0_get_total_input(void){
 }
 /********************************************************************************************/
 void PIT0_IRQHandler(void){
+	/*Each time enters the interrupt will save the input value if
+	 * the value is different of 3 that means no switch was pressed.
+	 * This value will be asked in color selection.*/
 	uint32_t total_input =(((GPIOA -> PDIR) & (0x10))>>4) | (((GPIOC -> PDIR) & (0x40))>>5);
 	if(Default_SW_status != total_input){
 		PIT0_total_input = total_input;
@@ -31,6 +34,7 @@ void PIT0_IRQHandler(void){
 	volatile uint32_t dummyRead = PIT->CHANNEL[0].TCTRL;
 }
 void PIT1_IRQHandler(void){
+	//the interrupt just activate the flag each 2 seconds
 	PIT1_user_status_flag = 1;
 	PIT->CHANNEL[1].TFLG |= PIT_TFLG_TIF_MASK;
 	volatile uint32_t dummyRead = PIT->CHANNEL[1].TCTRL;
@@ -50,7 +54,7 @@ void PIT1_IRQHandler(void){
  */
 void PIT_delay(PIT_timer_t pit_timer, My_float_pit_t system_clock , My_float_pit_t delay){
 	//LDVAL trigger = (period / clock period) -1
-	//System_cloclk is divided by 2 because PIT works at 10.5Mhz.
+	//System_clock is divided by 2 because PIT works at 10.5Mhz.
 	PIT->CHANNEL[pit_timer].LDVAL= ((uint32_t)(delay*system_clock))/2-1;
 }
 
