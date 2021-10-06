@@ -11,14 +11,29 @@
 #include "stdint.h"
 #include "MK64F12.h"
 #include "PIT.h"
+#define Default_SW_status (3)
+volatile uint8_t PIT0_user_status_flag = 0;
+volatile uint8_t PIT1_user_status_flag = 0;
+volatile uint8_t PIT0_total_input = Default_SW_status;
 
-volatile uint8_t PIT_user_status_flag = 0;
 
+uint8_t PIT0_get_total_input(void){
+
+	return PIT0_total_input;
+}
 /********************************************************************************************/
 void PIT0_IRQHandler(void){
-	PIT_user_status_flag = 1;
+	uint32_t total_input =(((GPIOA -> PDIR) & (0x10))>>4) | (((GPIOC -> PDIR) & (0x40))>>5);
+	if(Default_SW_status != total_input){
+		PIT0_total_input = total_input;
+	}
 	PIT->CHANNEL[0].TFLG |= PIT_TFLG_TIF_MASK;
 	volatile uint32_t dummyRead = PIT->CHANNEL[0].TCTRL;
+}
+void PIT1_IRQHandler(void){
+	PIT1_user_status_flag = 1;
+	PIT->CHANNEL[1].TFLG |= PIT_TFLG_TIF_MASK;
+	volatile uint32_t dummyRead = PIT->CHANNEL[1].TCTRL;
 }
 /********************************************************************************************/
 /********************************************************************************************/
@@ -58,9 +73,13 @@ void PIT_clock_gating(void){
  	 \param[in]  void.
  	 \return uint8_t flag status
  */
-uint8_t PIT_get_interrupt_flag_status(void){
+uint8_t PIT0_get_interrupt_flag_status(void){
 
-	return PIT_user_status_flag;
+	return PIT0_user_status_flag;
+}
+uint8_t PIT1_get_interrupt_flag_status(void){
+
+	return PIT1_user_status_flag;
 }
 
 /********************************************************************************************/
@@ -71,9 +90,13 @@ uint8_t PIT_get_interrupt_flag_status(void){
  	 \param[in]  void.
  	 \return void
  */
-void PIT_clear_interrupt_flag(void){
+void PIT0_clear_interrupt_flag(void){
 
-	PIT_user_status_flag = 0;
+	PIT0_user_status_flag = 0;
+}
+void PIT1_clear_interrupt_flag(void){
+
+	PIT1_user_status_flag = 0;
 }
 
 /********************************************************************************************/
@@ -107,6 +130,6 @@ void PIT_CH_enable(PIT_timer_t pit){
  	 \return void
  */
 void PIT_enable_interrupt(PIT_timer_t pit){
-	PIT->CHANNEL[0].TCTRL |= PIT_TCTRL_TIE_MASK ;
+	PIT->CHANNEL[pit].TCTRL |= PIT_TCTRL_TIE_MASK ;
 }
 

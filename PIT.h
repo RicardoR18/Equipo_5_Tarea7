@@ -25,8 +25,11 @@ typedef enum {PIT_0,PIT_1,PIT_2,PIT_3} PIT_timer_t;
 
 /********************************************************************************************/
 void PIT0_IRQHandler(void);
+void PIT1_IRQHandler(void);
 /********************************************************************************************/
 /********************************************************************************************/
+//return the status of SW2 and SW3
+uint8_t PIT0_get_total_input(void);
 /*!
  	 \brief	 This function configure the PIT to generate a delay base on the system clock.
  	 It is important to note that this strictly is not device driver since everything is
@@ -57,7 +60,8 @@ void PIT_clock_gating(void);
  	 \param[in]  void.
  	 \return uint8_t flag status
  */
-uint8_t PIT_get_interrupt_flag_status(void);
+uint8_t PIT0_get_interrupt_flag_status(void);
+uint8_t PIT1_get_interrupt_flag_status(void);
 
 /********************************************************************************************/
 /*!
@@ -67,7 +71,8 @@ uint8_t PIT_get_interrupt_flag_status(void);
  	 \param[in]  void.
  	 \return uint8_t flag status
  */
-void PIT_clear_interrupt_flag(void);
+void PIT0_clear_interrupt_flag(void);
+void PIT1_clear_interrupt_flag(void);
 
 /********************************************************************************************/
 /*!

@@ -9,11 +9,17 @@
 #include "GPIO.h"
 #include "Bits.h"
 #include "RGB.h"
+#include "PIT.h"
+#include "NVIC.h"
 
 #define GPIO_OFF_CONST (0xFFFFFFFFU)
+#define SYSTEM_CLOCK (21000000U)
+#define DELAY_PIT0 (0.2F)	//100ms
+#define DELAY_PIT1 (4.0F)	//   2s
 
 void RGB_init(void);
 void SW_init(void);
+void PIT_init(void);
 
 typedef enum {
 	NO_COLOR,
@@ -31,7 +37,6 @@ typedef enum {
 
 typedef struct
 {
-	//uint32_t out;
 	void (*FuncPoint)(void);
 	uint16_t wait;
 	uint8_t next[4];
@@ -39,25 +44,25 @@ typedef struct
 
 uint32_t input_port_a = 0, input_port_c = 0, total_input = 0;
 const State_t FSM_Moore[10]=
-		{
-			{&RGB_off		,65000 ,{BLUE_SQ3 , YELLOW_SQ1, GREEN_SQ2,NO_COLOR		}},	/* YELLOW_1 	*/
-			{&RGB_YELLOW_ON ,65000 ,{BLUE_SQ3 , RED_SQ1   , GREEN_SQ2, RED_SQ1		}},	/* YELLOW_1 	*/
-			{&RGB_RED_ON 	,65000 ,{BLUE_SQ3 , PURPLE_SQ1, GREEN_SQ2, PURPLE_SQ1	}},	/* RED_1 		*/
-			{&RGB_PURPLE_ON ,65000 ,{BLUE_SQ3 , YELLOW_SQ1, GREEN_SQ2, YELLOW_SQ1	}},	/* PURPLE_1	*/
+	{
+		{&RGB_off		,65000 ,{BLUE_SQ3 , YELLOW_SQ1, GREEN_SQ2, NO_COLOR		}},	/* YELLOW_1 	*/
+		{&RGB_YELLOW_ON ,65000 ,{BLUE_SQ3 , RED_SQ1   , GREEN_SQ2, RED_SQ1		}},	/* YELLOW_1 	*/
+		{&RGB_RED_ON 	,65000 ,{BLUE_SQ3 , PURPLE_SQ1, GREEN_SQ2, PURPLE_SQ1	}},	/* RED_1 		*/
+		{&RGB_PURPLE_ON ,65000 ,{BLUE_SQ3 , YELLOW_SQ1, GREEN_SQ2, YELLOW_SQ1	}},	/* PURPLE_1	*/
 
-			{&RGB_GREEN_ON 	,65000 ,{BLUE_SQ3 , YELLOW_SQ1, RED_SQ2  , RED_SQ2		}},	/* GREEN_2 	*/
-			{&RGB_RED_ON 	,65000 ,{BLUE_SQ3 , YELLOW_SQ1, WHITE_SQ2, WHITE_SQ2	}},	/* RED_2 		*/
-			{&RGB_WHITE_ON	,65000 ,{BLUE_SQ3 , YELLOW_SQ1, GREEN_SQ2, GREEN_SQ2	}},	/* WHITE_2 	*/
+		{&RGB_GREEN_ON 	,65000 ,{BLUE_SQ3 , YELLOW_SQ1, RED_SQ2  , RED_SQ2		}},	/* GREEN_2 	*/
+		{&RGB_RED_ON 	,65000 ,{BLUE_SQ3 , YELLOW_SQ1, WHITE_SQ2, WHITE_SQ2	}},	/* RED_2 		*/
+		{&RGB_WHITE_ON	,65000 ,{BLUE_SQ3 , YELLOW_SQ1, GREEN_SQ2, GREEN_SQ2	}},	/* WHITE_2 	*/
 
-			{&RGB_BLUE_ON	,65000 ,{GREEN_SQ3, YELLOW_SQ1, GREEN_SQ2, GREEN_SQ3	}},	/* BLUE_3 	*/
-			{&RGB_GREEN_ON	,65000 ,{WHITE_SQ3, YELLOW_SQ1, GREEN_SQ2, WHITE_SQ3	}},	/* GREEN_3 	*/
-			{&RGB_WHITE_ON	,65000 ,{BLUE_SQ3 ,	YELLOW_SQ1, GREEN_SQ2, BLUE_SQ3		}},	/* WHITE_3 	*/
+		{&RGB_BLUE_ON	,65000 ,{GREEN_SQ3, YELLOW_SQ1, GREEN_SQ2, GREEN_SQ3	}},	/* BLUE_3 	*/
+		{&RGB_GREEN_ON	,65000 ,{WHITE_SQ3, YELLOW_SQ1, GREEN_SQ2, WHITE_SQ3	}},	/* GREEN_3 	*/
+		{&RGB_WHITE_ON	,65000 ,{BLUE_SQ3 ,	YELLOW_SQ1, GREEN_SQ2, BLUE_SQ3		}},	/* WHITE_3 	*/
 
-		};
+	};
 
 int main(void) {
+	//No color shown at start and until you press a sequence combination.
 	State_name_t current_state = NO_COLOR;
-
 	// Turn on all ports needed
 	GPIO_clock_gating(GPIO_A);
 	GPIO_clock_gating(GPIO_B);
@@ -67,21 +72,23 @@ int main(void) {
 	RGB_init();
 	SW_init();
 
+	//Enable global interrupts, PIT0 interrupt and its priority
+	NVIC_enable_interrupt_and_priotity(PIT_CH0_IRQ, PRIORITY_10);
+	NVIC_enable_interrupt_and_priotity(PIT_CH1_IRQ, PRIORITY_9);
+	NVIC_global_enable_interrupts;
+	//Initialize PIT0 & PIT1
+	PIT_init();
+
 	for(;;){
-		FSM_Moore[current_state].FuncPoint();
-		input_port_a = GPIOA -> PDIR;
-		input_port_a &=(0x10);
-		input_port_c = GPIOC -> PDIR;
-		input_port_c &= (0x40);
-		input_port_c = input_port_c >> 5;
-		input_port_a = input_port_a >> 4;
-		total_input = input_port_a | input_port_c;
 
-		current_state = FSM_Moore[current_state].next[total_input];
+		if(TRUE == PIT1_get_interrupt_flag_status()){
 
 
+			current_state = FSM_Moore[current_state].next[PIT0_get_total_input()];
+			FSM_Moore[current_state].FuncPoint();
+			PIT1_clear_interrupt_flag();
+		}
 	}
-
 
 
     return 0 ;
@@ -111,4 +118,14 @@ void SW_init(void){
 
 	GPIO_data_direction_pin(GPIO_C,GPIO_INPUT, bit_6);
 	GPIO_data_direction_pin(GPIO_A,GPIO_INPUT, bit_4);
+}
+void PIT_init(void){
+	PIT_clock_gating();
+	PIT_enable();
+	PIT_enable_interrupt(PIT_0);
+	PIT_enable_interrupt(PIT_1);
+	PIT_delay(PIT_0, SYSTEM_CLOCK, DELAY_PIT0);
+	PIT_delay(PIT_1, SYSTEM_CLOCK, DELAY_PIT1);
+	PIT_CH_enable(PIT_0);
+	PIT_CH_enable(PIT_1);
 }
